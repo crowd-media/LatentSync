@@ -13,6 +13,8 @@
 # limitations under the License.
 
 import argparse
+import os
+import numpy as np
 from tqdm.auto import tqdm
 import torch
 import torch.nn as nn
@@ -65,6 +67,18 @@ def main(config):
 
     num_correct_preds = 0
     num_total_preds = 0
+    save_folder = "/home/ubuntu/data-home/evaluations/latentsync/syncnet_debug/data/latentsync_input"
+    os.makedirs(save_folder, exist_ok=True)
+
+    save_folder_frames = os.path.join(save_folder, "frames")
+    save_folder_audio = os.path.join(save_folder, "audio_samples")
+    save_folder_label = os.path.join(save_folder, "labels")
+    save_folder_sims = os.path.join(save_folder, "losses")
+
+    os.makedirs(save_folder_frames, exist_ok=True)
+    os.makedirs(save_folder_audio, exist_ok=True)
+    os.makedirs(save_folder_label, exist_ok=True)
+    os.makedirs(save_folder_sims, exist_ok=True)
 
     while True:
         for step, batch in enumerate(test_dataloader):
@@ -89,9 +103,13 @@ def main(config):
                 frames = frames[:, :, height // 2 :, :]
 
             with torch.no_grad():
+                torch.save(frames, os.path.join(save_folder_frames, f"frames_{global_step}.pt"))
+                torch.save(audio_samples, os.path.join(save_folder_audio, f"mel_chunk_{global_step}.pt"))
+                torch.save(y, os.path.join(save_folder_label, f"label_{global_step}.pt"))
                 vision_embeds, audio_embeds = syncnet(frames, audio_samples)
 
             sims = nn.functional.cosine_similarity(vision_embeds, audio_embeds)
+            torch.save(sims, os.path.join(save_folder_sims, f"sims_{global_step}.pt"))
 
             preds = (sims > 0.5).to(dtype=torch.float16)
             num_correct_preds += (preds == y).sum().item()
@@ -99,10 +117,12 @@ def main(config):
 
             progress_bar.update(1)
             global_step += 1
-
             if global_step >= num_val_batches:
                 progress_bar.close()
-                print(f"SyncNet Accuracy: {num_correct_preds / num_total_preds*100:.2f}%")
+                accuracy = (num_correct_preds / num_total_preds)*100
+                print(f"SyncNet Accuracy: {accuracy:.2f}%")
+                np.save(os.path.join(save_folder, "accuracy.npy"), accuracy)
+                torch.save(preds, os.path.join(save_folder, "preds.pt"))
                 return
 
 
