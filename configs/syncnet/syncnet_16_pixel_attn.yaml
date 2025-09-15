@@ -20,9 +20,9 @@ ckpt:
 data:
   train_output_dir: debug/syncnet
   num_val_samples: 2048
-  batch_size: 2 # 256
+  batch_size: 1 # 256
   gradient_accumulation_steps: 1
-  num_workers: 12 # 12
+  num_workers: 0 # 12
   latent_space: false
   num_frames: 16
   resolution: 256
