@@ -38,7 +38,7 @@ class SyncNetDataset(Dataset):
 
         self.resolution = config.data.resolution
         self.num_frames = config.data.num_frames
-        self.window_indices = {}
+        self.window_indices = []
 
         self.mel_window_length = math.ceil(self.num_frames / 5 * 16)
 
@@ -64,7 +64,9 @@ class SyncNetDataset(Dataset):
     def get_frames(self, video_reader: VideoReader):
         total_num_frames = len(video_reader)
 
-        start_idx = self.frame_index+1
+        start_idx = random.randint(0, total_num_frames - self.num_frames)
+        print(start_idx)
+        self.window_indices.append(start_idx)
         frames_index = np.arange(start_idx, start_idx + self.num_frames, dtype=int)
 
         # while True:
@@ -85,7 +87,7 @@ class SyncNetDataset(Dataset):
     def __getitem__(self, idx):
         while True:
             try:
-                # idx = random.randint(0, len(self) - 1)
+                idx = random.randint(0, len(self) - 1)
                 print(">>>>>>>>>>>>>>>>>>>>>> Current index:", idx)
                 # Get video file path
                 video_path = self.video_paths[idx]
