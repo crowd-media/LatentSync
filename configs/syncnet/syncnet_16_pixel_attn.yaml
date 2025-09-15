@@ -29,8 +29,8 @@ data:
   train_fileslist: /mnt/bn/maliva-gen-ai-v2/chunyu.li/fileslist/data_v10_core.txt
   train_data_dir: ""
   val_fileslist: ""
-  val_data_dir: /home/ubuntu/data-home/evaluations/latentsync/syncnet_debug/video
-  audio_mel_cache_dir: /home/ubuntu/data-home/evaluations/latentsync/syncnet_debug/audio_cache/mel
+  val_data_dir: /data/users/carla/evaluations/latentsync/syncnet_debug/video
+  audio_mel_cache_dir: /data/users/carla/evaluations/latentsync/syncnet_debug/audio_cache/mel
   lower_half: true
   audio_sample_rate: 16000
   video_fps: 25
