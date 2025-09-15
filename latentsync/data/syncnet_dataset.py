@@ -47,6 +47,7 @@ class SyncNetDataset(Dataset):
         self.image_processor = ImageProcessor(resolution=config.data.resolution)
         self.audio_mel_cache_dir = config.data.audio_mel_cache_dir
         Path(self.audio_mel_cache_dir).mkdir(parents=True, exist_ok=True)
+        self.worker_id = 0
 
     def __len__(self):
         return len(self.video_paths)
@@ -65,8 +66,6 @@ class SyncNetDataset(Dataset):
         total_num_frames = len(video_reader)
 
         start_idx = random.randint(0, total_num_frames - self.num_frames)
-        print(start_idx)
-        self.window_indices.append(start_idx)
         frames_index = np.arange(start_idx, start_idx + self.num_frames, dtype=int)
 
         # while True:
@@ -82,7 +81,8 @@ class SyncNetDataset(Dataset):
         return frames, wrong_frames, start_idx
 
     def worker_init_fn(self, worker_id):
-        self.worker_id = worker_id
+        # self.worker_id = worker_id
+        self.worker_id = 0
 
     def __getitem__(self, idx):
         while True:
@@ -121,6 +121,7 @@ class SyncNetDataset(Dataset):
                     continue
 
                 # if random.choice([True, False]):
+                self.window_indices.append(start_idx)
                 y = torch.ones(1).float()
                 chosen_frames = frames
                 # else:
