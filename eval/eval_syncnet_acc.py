@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 import argparse
 import os
 import numpy as np
@@ -67,7 +69,7 @@ def main(config):
 
     num_correct_preds = 0
     num_total_preds = 0
-    save_folder = "/home/ubuntu/data-home/evaluations/latentsync/syncnet_debug/validate_frames/latentsync_input"
+    save_folder = "/data/users/carla/evaluations/latentsync/syncnet_debug/validate_frames/latentsync_input"
     os.makedirs(save_folder, exist_ok=True)
 
     save_folder_frames = os.path.join(save_folder, "frames")
@@ -123,6 +125,7 @@ def main(config):
                 print(f"SyncNet Accuracy: {accuracy:.2f}%")
                 np.save(os.path.join(save_folder, "accuracy.npy"), accuracy)
                 torch.save(preds, os.path.join(save_folder, "preds.pt"))
+                np.save(os.path.join(save_folder, "window_list.npy"), test_dataloader.dataset.window_indices)
                 return
 
 
