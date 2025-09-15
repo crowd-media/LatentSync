@@ -67,7 +67,7 @@ def main(config):
 
     num_correct_preds = 0
     num_total_preds = 0
-    save_folder = "/home/ubuntu/data-home/evaluations/latentsync/syncnet_debug/data/latentsync_input"
+    save_folder = "/home/ubuntu/data-home/evaluations/latentsync/syncnet_debug/validate_frames/latentsync_input"
     os.makedirs(save_folder, exist_ok=True)
 
     save_folder_frames = os.path.join(save_folder, "frames")
