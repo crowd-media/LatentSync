@@ -48,6 +48,7 @@ class SyncNetDataset(Dataset):
         self.audio_mel_cache_dir = config.data.audio_mel_cache_dir
         Path(self.audio_mel_cache_dir).mkdir(parents=True, exist_ok=True)
         self.worker_id = 0
+        self.global_index = 0
 
     def __len__(self):
         return len(self.video_paths)
@@ -64,19 +65,25 @@ class SyncNetDataset(Dataset):
 
     def get_frames(self, video_reader: VideoReader):
         total_num_frames = len(video_reader)
+        # start_idx = random.randint(0, total_num_frames - self.num_frames)
 
-        start_idx = random.randint(0, total_num_frames - self.num_frames)
+        start_idx = self.global_index
+
+        if start_idx + self.num_frames > total_num_frames:
+            return None, None, None
+        
         frames_index = np.arange(start_idx, start_idx + self.num_frames, dtype=int)
-
+        frames = video_reader.get_batch(frames_index).asnumpy()
+        self.global_index += 1
+        
         # while True:
         #     wrong_start_idx = random.randint(0, total_num_frames - self.num_frames)
         #     if wrong_start_idx == start_idx:
         #         continue
         #     wrong_frames_index = np.arange(wrong_start_idx, wrong_start_idx + self.num_frames, dtype=int)
         #     break
-
-        frames = video_reader.get_batch(frames_index).asnumpy()
         # wrong_frames = video_reader.get_batch(wrong_frames_index).asnumpy()
+
         wrong_frames = None
         return frames, wrong_frames, start_idx
 
@@ -98,6 +105,8 @@ class SyncNetDataset(Dataset):
                     continue
 
                 frames, wrong_frames, start_idx = self.get_frames(vr)
+                if frames is None:
+                    break
 
                 mel_cache_path = os.path.join(
                     self.audio_mel_cache_dir, os.path.basename(video_path).replace(".mp4", "_mel.pt")
