@@ -64,7 +64,7 @@ def main(config):
     syncnet.eval()
 
     global_step = 0
-    num_val_batches = config.data.num_val_samples // config.data.batch_size
+    num_val_batches = len(test_dataloader) // config.data.batch_size
     progress_bar = tqdm(range(0, num_val_batches), initial=0, desc="Testing accuracy")
 
     num_correct_preds = 0
@@ -82,57 +82,59 @@ def main(config):
     os.makedirs(save_folder_label, exist_ok=True)
     os.makedirs(save_folder_sims, exist_ok=True)
 
-    while True:
-        for step, batch in enumerate(test_dataloader):
-            ### >>>> Test >>>> ###
+    # while True:
+    print(">>>>>>>",len(test_dataloader))
+    for batch in test_dataloader:
+        ### >>>> Test >>>> ###
 
-            frames = batch["frames"].to(device, dtype=torch.float16)
-            audio_samples = batch["audio_samples"].to(device, dtype=torch.float16)
-            y = batch["y"].to(device, dtype=torch.float16).squeeze(1)
+        frames = batch["frames"].to(device, dtype=torch.float16)
+        audio_samples = batch["audio_samples"].to(device, dtype=torch.float16)
+        y = batch["y"].to(device, dtype=torch.float16).squeeze(1)
 
-            if config.data.latent_space:
-                frames = rearrange(frames, "b f c h w -> (b f) c h w")
-
-                with torch.no_grad():
-                    frames = vae.encode(frames).latent_dist.sample() * 0.18215
-
-                frames = rearrange(frames, "(b f) c h w -> b (f c) h w", f=config.data.num_frames)
-            else:
-                frames = rearrange(frames, "b f c h w -> b (f c) h w")
-
-            if config.data.lower_half:
-                height = frames.shape[2]
-                frames = frames[:, :, height // 2 :, :]
+        if config.data.latent_space:
+            frames = rearrange(frames, "b f c h w -> (b f) c h w")
 
             with torch.no_grad():
-                torch.save(frames, os.path.join(save_folder_frames, f"frames_{global_step}.pt"))
-                torch.save(audio_samples, os.path.join(save_folder_audio, f"mel_chunk_{global_step}.pt"))
-                torch.save(y, os.path.join(save_folder_label, f"label_{global_step}.pt"))
-                vision_embeds, audio_embeds = syncnet(frames, audio_samples)
+                frames = vae.encode(frames).latent_dist.sample() * 0.18215
 
-            sims = nn.functional.cosine_similarity(vision_embeds, audio_embeds)
-            torch.save(sims, os.path.join(save_folder_sims, f"sims_{global_step}.pt"))
+            frames = rearrange(frames, "(b f) c h w -> b (f c) h w", f=config.data.num_frames)
+        else:
+            frames = rearrange(frames, "b f c h w -> b (f c) h w")
 
-            preds = (sims > 0.5).to(dtype=torch.float16)
-            num_correct_preds += (preds == y).sum().item()
-            num_total_preds += len(sims)
+        if config.data.lower_half:
+            height = frames.shape[2]
+            frames = frames[:, :, height // 2 :, :]
 
-            progress_bar.update(1)
-            global_step += 1
-            if global_step >= num_val_batches:
-                progress_bar.close()
-                accuracy = (num_correct_preds / num_total_preds)*100
-                print(f"SyncNet Accuracy: {accuracy:.2f}%")
-                np.save(os.path.join(save_folder, "accuracy.npy"), accuracy)
-                torch.save(preds, os.path.join(save_folder, "preds.pt"))
-                np.save(os.path.join(save_folder, "window_list.npy"), test_dataloader.dataset.window_indices)
-                return
+        with torch.no_grad():
+            torch.save(frames, os.path.join(save_folder_frames, f"frames_{global_step}.pt"))
+            torch.save(audio_samples, os.path.join(save_folder_audio, f"mel_chunk_{global_step}.pt"))
+            torch.save(y, os.path.join(save_folder_label, f"label_{global_step}.pt"))
+            vision_embeds, audio_embeds = syncnet(frames, audio_samples)
+
+        sims = nn.functional.cosine_similarity(vision_embeds, audio_embeds)
+        torch.save(sims, os.path.join(save_folder_sims, f"sims_{global_step}.pt"))
+
+        preds = (sims > 0.5).to(dtype=torch.float16)
+        num_correct_preds += (preds == y).sum().item()
+        num_total_preds += len(sims)
+
+        progress_bar.update(1)
+        global_step += 1
+        # if global_step >= num_val_batches:
+
+    progress_bar.close()
+    accuracy = (num_correct_preds / num_total_preds)*100
+    print(f"SyncNet Accuracy: {accuracy:.2f}%")
+    np.save(os.path.join(save_folder, "accuracy.npy"), accuracy)
+    torch.save(preds, os.path.join(save_folder, "preds.pt"))
+    np.save(os.path.join(save_folder, "window_list.npy"), test_dataloader.dataset.window_indices)
+    return
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Code to test the accuracy of SyncNet")
 
-    parser.add_argument("--config_path", type=str, default="configs/syncnet/syncnet_16_latent.yaml")
+    parser.add_argument("--config_path", type=str, default="configs/syncnet/syncnet_16_pixel_attn.yaml")
     args = parser.parse_args()
 
     # Load a configuration file

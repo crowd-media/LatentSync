@@ -50,8 +50,14 @@ class SyncNetDataset(Dataset):
         self.worker_id = 0
         self.global_index = 0
 
+        # ONLY ONE VIDEO
+        video_path = self.video_paths[0]
+        self.vr = VideoReader(video_path, ctx=cpu(self.worker_id))
+
+
     def __len__(self):
-        return len(self.video_paths)
+        length = len(self.vr)-self.num_frames-2
+        return length
 
     def read_audio(self, video_path: str):
         ar = AudioReader(video_path, ctx=cpu(self.worker_id), sample_rate=self.audio_sample_rate)
@@ -69,9 +75,6 @@ class SyncNetDataset(Dataset):
 
         # If working with more than one video -> update global index accordingly
         start_idx = self.global_index
-
-        if start_idx + self.num_frames > total_num_frames:
-            return None, None, None
         
         frames_index = np.arange(start_idx, start_idx + self.num_frames, dtype=int)
         frames = video_reader.get_batch(frames_index).asnumpy()
@@ -96,19 +99,18 @@ class SyncNetDataset(Dataset):
         while True:
             try:
                 # If working with more than one video -> change this to sequential as well
-                idx = random.randint(0, len(self) - 1)
+                #idx = random.randint(0, len(self) - 1)
                 print(">>>>>>>>>>>>>>>>>>>>>> Current index:", idx)
                 # Get video file path
-                video_path = self.video_paths[idx]
-
-                vr = VideoReader(video_path, ctx=cpu(self.worker_id))
+                # video_path = self.video_paths[idx]
+                # vr = VideoReader(video_path, ctx=cpu(self.worker_id))
+                video_path = self.video_paths[0]
+                vr = self.vr
 
                 if len(vr) < 2 * self.num_frames:
                     continue
 
                 frames, wrong_frames, start_idx = self.get_frames(vr)
-                if frames is None:
-                    break
 
                 mel_cache_path = os.path.join(
                     self.audio_mel_cache_dir, os.path.basename(video_path).replace(".mp4", "_mel.pt")
@@ -148,7 +150,8 @@ class SyncNetDataset(Dataset):
                 print(f"{type(e).__name__} - {e} - {video_path}")
                 if "vr" in locals():
                     vr.seek(0)  # avoid memory leak
-
+    
+        
         sample = dict(frames=chosen_frames, audio_samples=mel, y=y)
 
         return sample
