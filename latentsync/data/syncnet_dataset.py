@@ -67,6 +67,7 @@ class SyncNetDataset(Dataset):
         total_num_frames = len(video_reader)
         # start_idx = random.randint(0, total_num_frames - self.num_frames)
 
+        # If working with more than one video -> update global index accordingly
         start_idx = self.global_index
 
         if start_idx + self.num_frames > total_num_frames:
@@ -94,6 +95,7 @@ class SyncNetDataset(Dataset):
     def __getitem__(self, idx):
         while True:
             try:
+                # If working with more than one video -> change this to sequential as well
                 idx = random.randint(0, len(self) - 1)
                 print(">>>>>>>>>>>>>>>>>>>>>> Current index:", idx)
                 # Get video file path
