@@ -106,13 +106,13 @@ def main(config):
             frames = frames[:, :, height // 2 :, :]
 
         with torch.no_grad():
-            torch.save(frames, os.path.join(save_folder_frames, f"frames_{global_step}.pt"))
-            torch.save(audio_samples, os.path.join(save_folder_audio, f"mel_chunk_{global_step}.pt"))
-            torch.save(y, os.path.join(save_folder_label, f"label_{global_step}.pt"))
+            torch.save(frames, os.path.join(save_folder_frames, f"frames_{global_step:d04}.pt"))
+            torch.save(audio_samples, os.path.join(save_folder_audio, f"mel_chunk_{global_step:d04}.pt"))
+            torch.save(y, os.path.join(save_folder_label, f"label_{global_step:d04}.pt"))
             vision_embeds, audio_embeds = syncnet(frames, audio_samples)
 
         sims = nn.functional.cosine_similarity(vision_embeds, audio_embeds)
-        torch.save(sims, os.path.join(save_folder_sims, f"sims_{global_step}.pt"))
+        torch.save(sims, os.path.join(save_folder_sims, f"sims_{global_step:d04}.pt"))
 
         preds = (sims > 0.5).to(dtype=torch.float16)
         num_correct_preds += (preds == y).sum().item()

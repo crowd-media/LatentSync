@@ -48,16 +48,18 @@ class SyncNetDataset(Dataset):
         self.audio_mel_cache_dir = config.data.audio_mel_cache_dir
         Path(self.audio_mel_cache_dir).mkdir(parents=True, exist_ok=True)
         self.worker_id = 0
-        self.global_index = 0
+        self.window_index = 0
+        self.video_index = 0
 
         # ONLY ONE VIDEO
-        video_path = self.video_paths[0]
-        self.vr = VideoReader(video_path, ctx=cpu(self.worker_id))
+        # video_path = self.video_paths[0]
+        # self.vr = VideoReader(video_path, ctx=cpu(self.worker_id))
 
 
     def __len__(self):
-        length = len(self.vr)-self.num_frames-2
-        return length
+        # length = len(self.vr)-self.num_frames-2
+        # return length
+        return 1000000  # Arbitrary large number for infinite sampling
 
     def read_audio(self, video_path: str):
         ar = AudioReader(video_path, ctx=cpu(self.worker_id), sample_rate=self.audio_sample_rate)
@@ -74,11 +76,14 @@ class SyncNetDataset(Dataset):
         # start_idx = random.randint(0, total_num_frames - self.num_frames)
 
         # If working with more than one video -> update global index accordingly
-        start_idx = self.global_index
+        start_idx = self.window_index
         
         frames_index = np.arange(start_idx, start_idx + self.num_frames, dtype=int)
         frames = video_reader.get_batch(frames_index).asnumpy()
-        self.global_index += 1
+        self.window_index += 1
+        if self.window_index + self.num_frames >= total_num_frames:
+            self.window_index = 0
+            self.video_index += 1
         
         # while True:
         #     wrong_start_idx = random.randint(0, total_num_frames - self.num_frames)
@@ -104,10 +109,18 @@ class SyncNetDataset(Dataset):
                 # Get video file path
                 # video_path = self.video_paths[idx]
                 # vr = VideoReader(video_path, ctx=cpu(self.worker_id))
-                video_path = self.video_paths[0]
-                vr = self.vr
+                # video_path = self.video_paths[0]
+                # vr = self.vr
+                if self.video_index >= len(self.video_paths):
+                    break
+
+                video_path = self.video_paths[self.video_index]
+                vr = VideoReader(video_path, ctx=cpu(self.worker_id))
+    
 
                 if len(vr) < 2 * self.num_frames:
+                    self.video_index += 1
+                    self.window_index = 0
                     continue
 
                 frames, wrong_frames, start_idx = self.get_frames(vr)
